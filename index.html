@@ -130,7 +130,7 @@
   .notes { font-size: .85rem; color: var(--muted); display: flex; flex-direction: column; gap: 6px; }
   .notes p { margin: 0; max-width: 90ch; }
   @media (max-width: 480px) { h1 { font-size: 1.6rem; } .big { font-size: 1.9rem; } }
-.buildinfo { margin-top: 18px; text-align: center; font-family: "IBM Plex Mono", monospace; font-size: .7rem; color: var(--muted, #6b7785); opacity: .8; user-select: all; }
+.buildinfo { display: inline-block; margin-top: 8px; padding: 2px 8px; border: 1px solid var(--line); border-radius: 4px; font-family: var(--f-mono); font-size: .72rem; color: var(--muted); user-select: all; }
 </style>
 </head>
 <body>
@@ -141,6 +141,7 @@
     <div>
       <h1 data-i18n="title"></h1>
       <p class="sub" data-i18n="sub"></p>
+      <div class="buildinfo" id="buildinfo" aria-label="Versión"></div>
     </div>
     <div class="ctl">
       <div class="seg" role="group" aria-label="Idioma / Language">
@@ -203,7 +204,6 @@
   </section>
 
   <div id="out" aria-live="polite"></div>
-  <footer class="buildinfo" id="buildinfo"></footer>
 </div>
 
 <script>
@@ -598,11 +598,26 @@ var BUILD = { sha: "dev", date: "" };
 (function () {
   var el = document.getElementById("buildinfo");
   if (!el) return;
-  var d = BUILD.date ? new Date(BUILD.date) : null;
-  var ok = d && !isNaN(d);
-  var f = ok ? d.toISOString().slice(0, 16).replace("T", " ") + " UTC" : "";
-  el.textContent = "v " + BUILD.sha + (f ? " · " + f : "");
-  el.title = ok ? "Commit " + BUILD.sha + " · " + BUILD.date : "Build local (sin desplegar)";
+  function show(sha, iso, derived) {
+    var d = iso ? new Date(iso) : null, ok = d && !isNaN(d);
+    el.textContent = "v " + sha + (ok ? " · " + d.toISOString().slice(0, 16).replace("T", " ") + " UTC" : "");
+    el.title = (sha === "dev" ? "Build local (sin desplegar)" : "Commit " + sha + (iso ? " · " + iso : "")) + (derived ? " (leído del service worker)" : "");
+  }
+  show(BUILD.sha, BUILD.date, false);
+  // Respaldo si el workflow no estampó la página: el hash sale del nombre de la caché del service worker
+  // y la fecha de la cabecera Last-Modified de sw.js (hora del despliegue).
+  var host = location.hostname;
+  if (BUILD.sha === "dev" && /^https?:$/.test(location.protocol) && host !== "localhost" && host !== "127.0.0.1" && window.caches) {
+    caches.keys().then(function (keys) {
+      var k = keys.filter(function (n) { return /^desarrollos-[0-9a-f]{7}$/.test(n); })[0];
+      if (!k) return;
+      var sha = k.slice(12);
+      show(sha, "", true);
+      return fetch("sw.js", { cache: "no-store" }).then(function (r) {
+        var lm = r.headers.get("last-modified"); if (lm) show(sha, new Date(lm).toISOString(), true);
+      });
+    }).catch(function () {});
+  }
 })();
 </script>
 <script>

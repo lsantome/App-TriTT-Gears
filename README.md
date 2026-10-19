@@ -64,7 +64,8 @@ Todas las apps de `usuario.github.io/<repo>/` comparten **origen**, y por tanto 
 
 ## Versión visible
 
-El pie de la app muestra `v <hash> · <fecha UTC>` del commit desplegado (lo rellena el workflow). En local muestra `v dev`.
+Bajo el título, la app muestra `v <hash> · <fecha UTC>` del commit desplegado (lo rellena el workflow). En local muestra `v dev`.
+Si el workflow del repo es una versión antigua (la carpeta oculta `.github/` es fácil de olvidar al copiar archivos), la app lo detecta y toma el hash del nombre de la caché del service worker y la fecha de la cabecera `Last-Modified` de `sw.js`; el tooltip lo indica con «leído del service worker».
 
 ## Identidad de la PWA (importante con varias apps en el mismo usuario)
 
