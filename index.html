@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Calculadora de desarrollos</title>
+<meta name="description" content="Calculadora de desarrollos para triatlón y contrarreloj: elige el plato más grande que mantiene tu velocidad objetivo sobre los piñones centrales del cassette.">
+<meta name="theme-color" content="#EEF1F4">
+<meta name="color-scheme" content="light dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Desarrollos">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>
+  html { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  body { margin: 0; min-height: 100vh; }
+  /* Layout: barra superior con idioma y tema, panel de entradas, franja de resultado, tres propuestas en columnas que apilan en móvil, matriz de ensayo desplegable. Claro por defecto. */
+  :root {
+    --bg: #EEF1F4;
+    --surface: #FFFFFF;
+    --ink: #17212B;
+    --muted: #586678;
+    --line: #D5DCE4;
+    --accent: #0B6E99;
+    --accent-ink: #FFFFFF;
+    --accent-soft: #D6EAF3;
+    --band: #EAF3F8;
+    --ok: #1E7B4F;
+    --warn: #9A5A00;
+    --warn-soft: #FBEFD9;
+    --f-display: "Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
+    --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  :root[data-theme="dark"] {
+    --bg: #0F151B; --surface: #172029; --ink: #E4EAF0; --muted: #93A1B1; --line: #2A3643;
+    --accent: #55B8E2; --accent-ink: #08212E; --accent-soft: #1B3A4B; --band: #1A2A36;
+    --ok: #5CC795; --warn: #E3A94F; --warn-soft: #33270F; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5;
+    padding-block: 24px 40px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+  h1, h2, h3 { font-family: var(--f-display); font-weight: 600; margin: 0; text-wrap: balance; }
+  h1 { font-size: 2rem; line-height: 1.1; letter-spacing: .005em; }
+  .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px 24px; flex-wrap: wrap; }
+  .top > div:first-child { min-width: 0; flex: 1 1 320px; }
+  .sub { color: var(--muted); margin: 4px 0 0; max-width: 62ch; }
+  .ctl { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; background: var(--surface); }
+  .seg button { border: 0; border-radius: 0; }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .ctl button {
+    font: inherit; font-size: .8rem; font-weight: 600; letter-spacing: .04em; cursor: pointer;
+    color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 6px 12px;
+  }
+  .ctl button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+  .ctl button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 16px; }
+  .inputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 14px 16px; }
+  .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .field.wide { grid-column: 1 / -1; }
+  label, .lbl { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
+  input, select, textarea {
+    font: inherit; font-family: var(--f-mono); font-size: .95rem; color: var(--ink); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px; width: 100%; min-width: 0;
+  }
+  select { font-family: var(--f-body); }
+  input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 1px;
+  }
+  .hint { font-size: .78rem; color: var(--muted); }
+  details.adv { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
+  summary { cursor: pointer; font-weight: 500; color: var(--accent); }
+  details .inputs { margin-top: 12px; }
+  .err { color: var(--warn); font-size: .85rem; }
+
+  .strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); gap: 0; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); overflow: hidden; }
+  .stat { padding: 12px 16px; border-right: 1px solid var(--line); min-width: 0; }
+  .stat:last-child { border-right: 0; }
+  .stat .v { font-family: var(--f-mono); font-size: 1.5rem; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .stat .u { font-size: .85rem; color: var(--muted); margin-left: 3px; }
+  .stat .d { font-size: .78rem; color: var(--muted); }
+
+  .warn { background: var(--warn-soft); color: var(--warn); border-radius: 6px; padding: 12px 16px; font-size: .9rem; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr)); gap: 16px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .card.best { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .card header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .tag { font-size: .7rem; text-transform: uppercase; letter-spacing: .1em; font-weight: 600; color: var(--muted); }
+  .chip { font-size: .68rem; text-transform: uppercase; letter-spacing: .08em; font-weight: 600; background: var(--warn-soft); color: var(--warn); padding: 2px 8px; border-radius: 3px; }
+  .badge { font-size: .68rem; text-transform: uppercase; letter-spacing: .08em; font-weight: 600; background: var(--accent); color: var(--accent-ink); padding: 2px 8px; border-radius: 3px; }
+  .big { font-family: var(--f-mono); font-size: 2.2rem; font-weight: 500; line-height: 1; }
+  .big small { font-family: var(--f-body); font-size: .85rem; color: var(--muted); margin-left: 4px; }
+  .kv { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; font-size: .88rem; margin: 0; }
+  .kv dt { color: var(--muted); }
+  .kv dd { margin: 0; font-family: var(--f-mono); font-variant-numeric: tabular-nums; text-align: right; }
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-family: var(--f-mono); font-size: .85rem; font-variant-numeric: tabular-nums; }
+  th, td { padding: 5px 8px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { font-family: var(--f-body); font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+  th:first-child, td:first-child { text-align: left; }
+  tr.band td { background: var(--band); }
+  tr.target td { background: var(--accent-soft); font-weight: 600; color: var(--ink); }
+  .mark { color: var(--accent); font-family: var(--f-body); font-size: .7rem; margin-left: 6px; }
+  .neg { color: var(--muted); }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: .8rem; color: var(--muted); margin: 12px 0; }
+  .sw { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; border: 1px solid var(--line); }
+  .sw.b { background: var(--band); } .sw.t { background: var(--accent-soft); border-color: var(--accent); }
+  .matrix td.cell-band, .matrix th.cell-band { background: var(--band); }
+  .matrix td.cell-target { background: var(--accent-soft); font-weight: 600; outline: 1px solid var(--accent); outline-offset: -1px; }
+  .matrix td:first-child { font-weight: 600; background: var(--surface); position: sticky; left: 0; }
+  .notes { font-size: .85rem; color: var(--muted); display: flex; flex-direction: column; gap: 6px; }
+  .notes p { margin: 0; max-width: 90ch; }
+  @media (max-width: 480px) { h1 { font-size: 1.6rem; } .big { font-size: 1.9rem; } }
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1 data-i18n="title"></h1>
+      <p class="sub" data-i18n="sub"></p>
+    </div>
+    <div class="ctl">
+      <div class="seg" role="group" aria-label="Idioma / Language">
+        <button type="button" id="langEs" data-lang="es" aria-pressed="true">ES</button>
+        <button type="button" id="langEn" data-lang="en" aria-pressed="false">EN</button>
+      </div>
+      <button type="button" id="themeBtn"></button>
+    </div>
+  </div>
+
+  <section class="panel">
+    <div class="inputs">
+      <div class="field wide">
+        <label for="cassette" data-i18n="lbl_cassette"></label>
+        <select id="cassette"></select>
+      </div>
+      <div class="field wide" id="customBox" hidden>
+        <label for="customCogs" data-i18n="lbl_custom"></label>
+        <input id="customCogs" type="text" value="11 12 13 14 15 17 19 21 24 27 30 34" autocomplete="off">
+        <span class="hint" id="customHint"></span>
+      </div>
+      <div class="field">
+        <label for="power" data-i18n="lbl_power"></label>
+        <input id="power" type="number" inputmode="decimal" min="50" max="600" step="1" value="235">
+      </div>
+      <div class="field">
+        <label for="cad" data-i18n="lbl_cad"></label>
+        <input id="cad" type="number" inputmode="decimal" min="50" max="130" step="1" value="90">
+      </div>
+      <div class="field">
+        <label for="cda" data-i18n="lbl_cda"></label>
+        <input id="cda" type="number" inputmode="decimal" min="0.1" max="0.6" step="0.005" value="0.23">
+      </div>
+    </div>
+    <details class="adv">
+      <summary data-i18n="adv"></summary>
+      <div class="inputs">
+        <div class="field"><label for="mass" data-i18n="lbl_mass"></label><input id="mass" type="number" inputmode="decimal" min="40" max="200" step="0.5" value="85"></div>
+        <div class="field"><label for="crr" data-i18n="lbl_crr"></label><input id="crr" type="number" inputmode="decimal" min="0.001" max="0.02" step="0.0005" value="0.004"></div>
+        <div class="field"><label for="rho" data-i18n="lbl_rho"></label><input id="rho" type="number" inputmode="decimal" min="0.9" max="1.4" step="0.01" value="1.19"></div>
+        <div class="field"><label for="eta" data-i18n="lbl_eta"></label><input id="eta" type="number" inputmode="decimal" min="90" max="100" step="0.1" value="97.5"></div>
+        <div class="field">
+          <label for="wheel" data-i18n="lbl_wheel"></label>
+          <select id="wheel">
+            <option value="2096">700×23c · 2096 mm</option>
+            <option value="2105">700×25c · 2105 mm</option>
+            <option value="2136" selected>700×28c · 2136 mm</option>
+            <option value="custom" data-i18n="wheel_custom"></option>
+          </select>
+        </div>
+        <div class="field" id="wheelBox" hidden><label for="wheelMm" data-i18n="lbl_wheelmm"></label><input id="wheelMm" type="number" inputmode="decimal" min="1800" max="2300" step="1" value="2136"></div>
+        <div class="field"><label for="cmin" data-i18n="lbl_cmin"></label><input id="cmin" type="number" inputmode="numeric" min="30" max="70" step="2" value="48"></div>
+        <div class="field"><label for="cmax" data-i18n="lbl_cmax"></label><input id="cmax" type="number" inputmode="numeric" min="30" max="70" step="2" value="68"><span class="hint" data-i18n="hint_even"></span></div>
+        <div class="field"><label for="kband" data-i18n="lbl_kband"></label><input id="kband" type="number" inputmode="numeric" min="1" max="13" step="1" data-i18n-ph="ph_auto"><span class="hint" data-i18n="hint_kband"></span></div>
+        <div class="field"><label for="tol" data-i18n="lbl_tol"></label><input id="tol" type="number" inputmode="decimal" min="1" max="20" step="1" value="6"><span class="hint" data-i18n="hint_tol"></span></div>
+        <div class="field"><label for="vforce" data-i18n="lbl_vforce"></label><input id="vforce" type="number" inputmode="decimal" min="10" max="70" step="0.1" data-i18n-ph="ph_vforce"><span class="hint" data-i18n="hint_vforce"></span></div>
+      </div>
+    </details>
+  </section>
+
+  <div id="out" aria-live="polite"></div>
+</div>
+
+<script>
+// ==CALC-START==
+var G = 9.81;
+var PRESETS = [
+  { group: "r12", items: [
+    { id: "r12-10-28", name: "10-28", cogs: [10,11,12,13,14,15,16,17,19,21,24,28] },
+    { id: "r12-10-30", name: "10-30", cogs: [10,11,12,13,14,15,17,19,21,24,27,30] },
+    { id: "r12-10-33", name: "10-33", cogs: [10,11,12,13,14,15,17,19,21,24,28,33] },
+    { id: "r12-10-36", name: "10-36", cogs: [10,11,12,13,15,17,19,21,24,28,32,36] }
+  ]},
+  { group: "r11", items: [
+    { id: "r11-11-25", name: "11-25", cogs: [11,12,13,14,15,16,17,19,21,23,25] },
+    { id: "r11-11-26", name: "11-26", cogs: [11,12,13,14,15,16,17,19,21,23,26] },
+    { id: "r11-11-28", name: "11-28", cogs: [11,12,13,14,15,16,17,19,22,25,28] },
+    { id: "r11-11-30", name: "11-30", cogs: [11,12,13,14,15,17,19,21,24,27,30] },
+    { id: "r11-11-32", name: "11-32", cogs: [11,12,13,14,15,17,19,22,25,28,32] }
+  ]},
+  { group: "f11", items: [
+    { id: "f11-11-32", name: "11-32", cogs: [11,12,13,14,15,17,19,22,25,28,32] }
+  ]},
+  { group: "x13", items: [
+    { id: "x13-10-46", name: "10-46", cogs: [10,11,12,13,15,17,19,21,24,28,32,38,46] }
+  ]},
+  { group: "s11", items: [
+    { id: "s11-11-25", name: "11-25", cogs: [11,12,13,14,15,16,17,19,21,23,25] },
+    { id: "s11-11-28", name: "11-28", cogs: [11,12,13,14,15,17,19,21,23,25,28] },
+    { id: "s11-11-30", name: "11-30", cogs: [11,12,13,14,16,18,20,22,25,28,30] },
+    { id: "s11-11-32", name: "11-32", cogs: [11,12,13,14,16,18,20,22,25,28,32] }
+  ]},
+  { group: "s12", items: [
+    { id: "s12-11-30", name: "11-30", cogs: [11,12,13,14,15,16,17,19,21,24,27,30] },
+    { id: "s12-11-34", name: "11-34", cogs: [11,12,13,14,15,17,19,21,24,27,30,34] }
+  ]},
+  { group: "custom", items: [
+    { id: "custom", name: null, cogs: null }
+  ]}
+];
+
+// Velocidad (m/s) en llano y sin viento para una potencia en pedal.
+function solveSpeed(P, o) {
+  var pw = P * o.eta;
+  var lo = 0, hi = 40;
+  for (var i = 0; i < 100; i++) {
+    var mid = (lo + hi) / 2;
+    var f = 0.5 * o.rho * o.cda * mid * mid * mid + o.crr * o.mass * G * mid - pw;
+    if (f > 0) hi = mid; else lo = mid;
+  }
+  return (lo + hi) / 2;
+}
+// Potencia en pedal necesaria para una velocidad (m/s).
+function powerFor(v, o) {
+  return (0.5 * o.rho * o.cda * v * v * v + o.crr * o.mass * G * v) / o.eta;
+}
+function speedKmh(chain, cog, cad, circ) { return chain / cog * circ * cad * 0.00006; }
+function cadenceFor(vKmh, chain, cog, circ) { return vKmh / (chain / cog * circ * 0.00006); }
+
+function centralBand(n, kOverride) {
+  var k = kOverride ? Math.min(n, Math.max(1, Math.round(kOverride))) : Math.max(3, Math.round(n / 3));
+  k = Math.min(k, n);
+  var start = Math.floor((n - k) / 2);
+  return { k: k, start: start, end: start + k - 1, center: start + (k - 1) / 2 };
+}
+function nearestIdx(chain, cogs, v, cad, circ) {
+  var best = 0, bd = Infinity;
+  for (var j = 0; j < cogs.length; j++) {
+    var d = Math.abs(speedKmh(chain, cogs[j], cad, circ) - v);
+    if (d < bd) { bd = d; best = j; }
+  }
+  return best;
+}
+function better(a, b) { // a mejor que b: más centrado, y a igualdad menor error de velocidad
+  return a.off < b.off || (a.off === b.off && Math.abs(a.dv) < Math.abs(b.dv));
+}
+// Solo platos de dentado par. Grande = mayor plato par que encaja; Medio y Bajo = los dos pares correlativos inferiores.
+function analyze(cogs, vKmh, cad, circ, cmin, cmax, kOverride, tolRpm) {
+  var band = centralBand(cogs.length, kOverride);
+  var tol = tolRpm > 0 ? tolRpm : 6;
+  var lo = cmin + (cmin % 2), hi = cmax - (cmax % 2);
+  var rows = [], byChain = {};
+  for (var c = lo; c <= hi; c += 2) {
+    var idx = nearestIdx(c, cogs, vKmh, cad, circ);
+    var vv = speedKmh(c, cogs[idx], cad, circ);
+    var cadNeed = cadenceFor(vKmh, c, cogs[idx], circ);
+    var inBand = idx >= band.start && idx <= band.end;
+    var r = { chain: c, idx: idx, v: vv, dv: vv - vKmh, cadNeed: cadNeed, inBand: inBand,
+              fit: inBand && Math.abs(cadNeed - cad) <= tol, off: Math.abs(idx - band.center) };
+    rows.push(r); byChain[c] = r;
+  }
+  var fits = rows.filter(function (r) { return r.fit; });
+  var props = [];
+  if (fits.length) {
+    var top = fits[fits.length - 1].chain;
+    [["large", top], ["medium", top - 2], ["small", top - 4]].forEach(function (e) {
+      if (byChain[e[1]]) props.push({ label: e[0], row: byChain[e[1]] });
+    });
+  }
+  var bestRow = null;
+  props.forEach(function (p) { if (p.row.fit && (!bestRow || better(p.row, bestRow))) bestRow = p.row; });
+  return { band: band, rows: rows, fits: fits, props: props, bestChain: bestRow ? bestRow.chain : null,
+           tol: tol, lo: lo, hi: hi, atCeiling: fits.length > 0 && fits[fits.length - 1].chain === hi };
+}
+// Devuelve { cogs } o { err: { key, a } }; los textos los pone la interfaz según el idioma.
+function parseCogs(text) {
+  var parts = String(text).split(/[\s,;]+/).filter(Boolean);
+  if (!parts.length) return { err: { key: "err_empty" } };
+  var arr = [];
+  for (var i = 0; i < parts.length; i++) {
+    var n = Number(parts[i]);
+    if (!isFinite(n) || n % 1 !== 0 || n < 9 || n > 50) return { err: { key: "err_num", a: parts[i] } };
+    arr.push(n);
+  }
+  if (arr.length < 11 || arr.length > 13) return { err: { key: "err_count", a: arr.length } };
+  arr.sort(function (a, b) { return a - b; });
+  for (var k = 1; k < arr.length; k++) if (arr[k] === arr[k - 1]) return { err: { key: "err_dup", a: arr[k] } };
+  return { cogs: arr };
+}
+// ==CALC-END==
+
+var DICT = {
+  es: {
+    title: "Calculadora de desarrollos",
+    sub: "Triatlón y contrarreloj. Encuentra el plato más grande que mantiene la velocidad de carrera sobre los piñones centrales del cassette, a tu cadencia.",
+    lbl_cassette: "Cassette instalado", lbl_custom: "Dientes del cassette personalizado (11 a 13 piñones)",
+    lbl_power: "Potencia media objetivo (W)", lbl_cad: "Cadencia media objetivo (rpm)", lbl_cda: "CdA (m²)",
+    adv: "Ajustes avanzados", lbl_mass: "Masa ciclista + bici (kg)", lbl_crr: "Crr (rodadura)", lbl_rho: "Densidad del aire (kg/m³)",
+    lbl_eta: "Eficiencia de transmisión (%)", lbl_wheel: "Rueda (circunferencia de rodadura)", wheel_custom: "Otra (mm)…", lbl_wheelmm: "Circunferencia (mm)",
+    lbl_cmin: "Plato mínimo a ensayar (T)", lbl_cmax: "Plato máximo a ensayar (T)", hint_even: "Solo se ensayan dentados pares",
+    lbl_kband: "Piñones en la banda central", hint_kband: "Vacío = un tercio del cassette", ph_auto: "auto",
+    lbl_tol: "Tolerancia de cadencia (± rpm)", hint_tol: "Máxima desviación aceptada con el piñón de trabajo",
+    lbl_vforce: "Forzar velocidad (km/h)", ph_vforce: "desde potencia", hint_vforce: "Si lo rellenas, ignora potencia y CdA",
+    theme_to_dark: "Modo oscuro", theme_to_light: "Modo claro",
+    g_r12: "SRAM Red / Force AXS 12 velocidades", g_r11: "SRAM Red XG-1190 11 velocidades", g_f11: "SRAM Force PG-1170 11 velocidades",
+    g_x13: "SRAM Red / Force XPLR 13 velocidades", g_s11: "Shimano 11 velocidades", g_s12: "Shimano 12 velocidades", g_custom: "Personalizado",
+    custom_item: "Definir dientes manualmente…",
+    err_empty: "Introduce los dientes separados por espacios o comas.", err_num: "«{a}» no es un número de dientes válido (9 a 50).",
+    err_count: "Hay {a} piñones; deben ser entre 11 y 13.", err_dup: "Hay un piñón repetido ({a}T).",
+    custom_ok: "{n} piñones: {list}", custom_warn: "Cassette personalizado: {err}",
+    chk: "Revisa estos datos: {list}.", b_cad: "cadencia", b_wheel: "circunferencia de rueda", b_range: "rango de platos", b_power: "potencia", b_model: "parámetros del modelo",
+    s_speed_est: "Velocidad estimada", s_speed_fix: "Velocidad fijada", d_model: "Llano, sin viento · CdA {cda}", d_power: "Potencia necesaria con el modelo: {p} W",
+    s_ratio: "Relación necesaria", d_ratio: "plato / piñón a {cad} rpm", s_band: "Banda central", d_band: "{k} de {n} piñones",
+    s_fit: "Platos que encajan", none: "ninguno", d_fit: "{a} de {b} ensayados",
+    w_norange: "El rango de platos no contiene ningún dentado par.",
+    w_none: "Ningún plato par entre {min} y {max}T deja {v} km/h dentro de la banda central, a ±{tol} rpm de tu cadencia, con este cassette. El más próximo es {c}T, que cae en el piñón de {g}T ({cn} rpm para la velocidad objetivo). Amplía el rango de platos, sube la tolerancia o cambia de cassette.",
+    w_few: "Solo hay {n} plato(s) par(es) correlativo(s) dentro del rango ensayado. Baja el plato mínimo en los ajustes avanzados para ver tres propuestas.",
+    w_ceil: "El plato grande ({hi}T) es el máximo del rango ensayado. Con este cassette podría encajar un plato mayor: sube el plato máximo en los ajustes avanzados.",
+    tag_large: "Grande", tag_medium: "Medio", tag_small: "Bajo", badge_best: "Mejor línea de cadena",
+    chip_cad: "Cadencia fuera de tolerancia", chip_band: "Fuera de la banda central", teeth: "dientes",
+    k_work: "Piñón de trabajo", k_work_v: "{g}T ({pos} de {n})", k_speed: "Velocidad a {cad} rpm", k_cad: "Cadencia para {v} km/h", k_ratio: "Relación",
+    th_cog: "Piñón", th_ratio: "Relación", th_kmh: "km/h", th_delta: "Δ obj.", mark_work: "piñón de trabajo", th_chain: "Plato",
+    m_sum: "Ensayo completo: velocidad (km/h) de cada plato con cada piñón a {cad} rpm", m_band: "Banda central", m_near: "Piñón más cercano a {v} km/h",
+    n_crit: "<strong>Criterio.</strong> Para cada plato se busca el piñón cuya velocidad a tu cadencia queda más cerca de la objetivo. El plato encaja si ese piñón está en la banda central y la cadencia necesaria para la velocidad objetivo queda dentro de la tolerancia (±{tol} rpm). «Grande» es el mayor plato de dentado par que encaja. «Medio» y «Bajo» son los dos pares correlativos inferiores (de 2 en 2 dientes), tanto si encajan como si no; si alguno se sale del criterio, la tarjeta lo indica. «Mejor línea de cadena» señala, entre las que encajan, la propuesta con el piñón de trabajo más centrado.",
+    n_model: "<strong>Modelo.</strong> Potencia en rueda = potencia × eficiencia = ½·ρ·CdA·v³ + Crr·m·g·v, en llano y sin viento. Con subidas o viento la velocidad media real cambia y con ella el piñón óptimo. Se asume plato único (1x) o el plato grande en un 2x.",
+    n_cogs: "<strong>Dentados.</strong> Los dentados de SRAM (Red/Force 11 y 12 velocidades, XPLR 13) están contrastados con fichas del fabricante y tiendas; los de Shimano son los habituales de la serie. Comprueba el tuyo y, si difiere, usa «Personalizado»."
+  },
+  en: {
+    title: "Gear calculator",
+    sub: "Triathlon and time trial. Finds the largest chainring that holds your race speed on the middle sprockets of the cassette, at your cadence.",
+    lbl_cassette: "Installed cassette", lbl_custom: "Custom cassette teeth (11 to 13 sprockets)",
+    lbl_power: "Target average power (W)", lbl_cad: "Target average cadence (rpm)", lbl_cda: "CdA (m²)",
+    adv: "Advanced settings", lbl_mass: "Rider + bike mass (kg)", lbl_crr: "Crr (rolling resistance)", lbl_rho: "Air density (kg/m³)",
+    lbl_eta: "Drivetrain efficiency (%)", lbl_wheel: "Wheel (rolling circumference)", wheel_custom: "Other (mm)…", lbl_wheelmm: "Circumference (mm)",
+    lbl_cmin: "Smallest chainring to test (T)", lbl_cmax: "Largest chainring to test (T)", hint_even: "Only even tooth counts are tested",
+    lbl_kband: "Sprockets in the central band", hint_kband: "Empty = one third of the cassette", ph_auto: "auto",
+    lbl_tol: "Cadence tolerance (± rpm)", hint_tol: "Maximum deviation accepted on the working sprocket",
+    lbl_vforce: "Force speed (km/h)", ph_vforce: "from power", hint_vforce: "If filled in, power and CdA are ignored",
+    theme_to_dark: "Dark mode", theme_to_light: "Light mode",
+    g_r12: "SRAM Red / Force AXS 12-speed", g_r11: "SRAM Red XG-1190 11-speed", g_f11: "SRAM Force PG-1170 11-speed",
+    g_x13: "SRAM Red / Force XPLR 13-speed", g_s11: "Shimano 11-speed", g_s12: "Shimano 12-speed", g_custom: "Custom",
+    custom_item: "Enter teeth manually…",
+    err_empty: "Enter the teeth separated by spaces or commas.", err_num: "“{a}” is not a valid tooth count (9 to 50).",
+    err_count: "There are {a} sprockets; it must be between 11 and 13.", err_dup: "A sprocket is repeated ({a}T).",
+    custom_ok: "{n} sprockets: {list}", custom_warn: "Custom cassette: {err}",
+    chk: "Check these inputs: {list}.", b_cad: "cadence", b_wheel: "wheel circumference", b_range: "chainring range", b_power: "power", b_model: "model parameters",
+    s_speed_est: "Estimated speed", s_speed_fix: "Fixed speed", d_model: "Flat, no wind · CdA {cda}", d_power: "Power needed by the model: {p} W",
+    s_ratio: "Required ratio", d_ratio: "chainring / sprocket at {cad} rpm", s_band: "Central band", d_band: "{k} of {n} sprockets",
+    s_fit: "Chainrings that fit", none: "none", d_fit: "{a} of {b} tested",
+    w_norange: "The chainring range contains no even tooth count.",
+    w_none: "No even-numbered chainring between {min} and {max}T keeps {v} km/h inside the central band within ±{tol} rpm of your cadence with this cassette. The closest is {c}T, which lands on the {g}T sprocket ({cn} rpm for the target speed). Widen the chainring range, raise the tolerance or change cassette.",
+    w_few: "Only {n} consecutive even chainring(s) fall inside the tested range. Lower the smallest chainring in the advanced settings to see three proposals.",
+    w_ceil: "The large chainring ({hi}T) is the top of the tested range. A larger one might fit with this cassette: raise the largest chainring in the advanced settings.",
+    tag_large: "Large", tag_medium: "Medium", tag_small: "Small", badge_best: "Best chain line",
+    chip_cad: "Cadence out of tolerance", chip_band: "Outside central band", teeth: "teeth",
+    k_work: "Working sprocket", k_work_v: "{g}T ({pos} of {n})", k_speed: "Speed at {cad} rpm", k_cad: "Cadence for {v} km/h", k_ratio: "Ratio",
+    th_cog: "Sprocket", th_ratio: "Ratio", th_kmh: "km/h", th_delta: "Δ target", mark_work: "working sprocket", th_chain: "Chainring",
+    m_sum: "Full trial: speed (km/h) of each chainring on each sprocket at {cad} rpm", m_band: "Central band", m_near: "Sprocket closest to {v} km/h",
+    n_crit: "<strong>Criterion.</strong> For each chainring, the sprocket whose speed at your cadence is closest to the target is picked. The chainring fits if that sprocket is in the central band and the cadence needed for the target speed is within the tolerance (±{tol} rpm). “Large” is the largest even-toothed chainring that fits. “Medium” and “Small” are the next two consecutive even sizes below (2 teeth apart), whether or not they fit; the card flags any that fall outside the criterion. “Best chain line” marks, among those that fit, the proposal whose working sprocket sits nearest the middle of the cassette.",
+    n_model: "<strong>Model.</strong> Wheel power = power × efficiency = ½·ρ·CdA·v³ + Crr·m·g·v, on flat ground with no wind. With climbs or wind the real average speed changes, and so does the best sprocket. It assumes a single chainring (1x) or the big ring of a 2x.",
+    n_cogs: "<strong>Tooth counts.</strong> SRAM tooth counts (Red/Force 11- and 12-speed, XPLR 13-speed) were checked against manufacturer sheets and retailers; Shimano ones are the usual counts for the series. Check yours and, if it differs, use “Custom”."
+  }
+};
+var lang = "es", loc = "es-ES";
+function t(k, p) {
+  var s = (DICT[lang] && DICT[lang][k] != null) ? DICT[lang][k] : (DICT.es[k] != null ? DICT.es[k] : k);
+  if (p) for (var x in p) s = s.split("{" + x + "}").join(p[x]);
+  return s;
+}
+function fmt(x, d) { return new Intl.NumberFormat(loc, { minimumFractionDigits: d, maximumFractionDigits: d }).format(x); }
+function sgn(x, d) { return (x > 0.05 ? "+" : x < -0.05 ? "−" : "±") + fmt(Math.abs(x), d); }
+var $ = function (id) { return document.getElementById(id); };
+function store(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+function load(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+
+function applyI18n() {
+  document.documentElement.lang = lang;
+  document.querySelectorAll("[data-i18n]").forEach(function (el) { el.textContent = t(el.getAttribute("data-i18n")); });
+  document.querySelectorAll("[data-i18n-ph]").forEach(function (el) { el.setAttribute("placeholder", t(el.getAttribute("data-i18n-ph"))); });
+  $("langEs").setAttribute("aria-pressed", lang === "es" ? "true" : "false");
+  $("langEn").setAttribute("aria-pressed", lang === "en" ? "true" : "false");
+  var dark = document.documentElement.getAttribute("data-theme") === "dark";
+  $("themeBtn").textContent = dark ? t("theme_to_light") : t("theme_to_dark");
+  $("themeBtn").setAttribute("aria-pressed", dark ? "true" : "false");
+}
+function setLang(l) {
+  lang = l === "en" ? "en" : "es"; loc = lang === "en" ? "en-US" : "es-ES";
+  store("lang", lang); buildSelect(); applyI18n(); render();
+}
+function setTheme(th) {
+  document.documentElement.setAttribute("data-theme", th === "dark" ? "dark" : "light");
+  store("theme", th === "dark" ? "dark" : "light"); applyI18n(); syncThemeColor();
+}
+function syncThemeColor() {
+  var m = document.querySelector('meta[name="theme-color"]');
+  if (m) m.setAttribute("content", document.documentElement.getAttribute("data-theme") === "dark" ? "#0F151B" : "#EEF1F4");
+}
+
+function buildSelect() {
+  var sel = $("cassette"), prev = sel.value || "r12-10-30";
+  var html = "";
+  PRESETS.forEach(function (g) {
+    var gl = t("g_" + g.group);
+    html += '<optgroup label="' + gl + '">';
+    g.items.forEach(function (it) {
+      html += '<option value="' + it.id + '">' + (g.group === "custom" ? t("custom_item") : gl + " · " + it.name) + "</option>";
+    });
+    html += "</optgroup>";
+  });
+  sel.innerHTML = html;
+  sel.value = prev;
+}
+function findPreset(id) {
+  for (var i = 0; i < PRESETS.length; i++) for (var j = 0; j < PRESETS[i].items.length; j++) if (PRESETS[i].items[j].id === id) return PRESETS[i].items[j];
+  return null;
+}
+function num(id) { return parseFloat($(id).value); }
+
+function renderCard(p, ctx, isBest) {
+  var r = p.row, cogs = ctx.cogs, band = ctx.res.band;
+  var cadNeed = cadenceFor(ctx.v, r.chain, cogs[r.idx], ctx.circ);
+  var trs = "";
+  for (var j = cogs.length - 1; j >= 0; j--) {
+    var s = speedKmh(r.chain, cogs[j], ctx.cad, ctx.circ);
+    var cls = (j === r.idx ? "target" : (j >= band.start && j <= band.end ? "band" : ""));
+    trs += '<tr class="' + cls + '"><td>' + cogs[j] + "T" + (j === r.idx ? '<span class="mark">' + t("mark_work") + "</span>" : "") + "</td><td>" +
+      fmt(r.chain / cogs[j], 2) + "</td><td>" + fmt(s, 1) + '</td><td class="' + (j === r.idx ? "" : "neg") + '">' + sgn(s - ctx.v, 1) + "</td></tr>";
+  }
+  return '<article class="card' + (isBest ? " best" : "") + '">' +
+    '<header><div><div class="tag">' + t("tag_" + p.label) + '</div><div class="big">' + r.chain + "<small>" + t("teeth") + "</small></div></div>" +
+    (isBest ? '<span class="badge">' + t("badge_best") + "</span>" : (r.fit ? "" : '<span class="chip">' + (r.inBand ? t("chip_cad") : t("chip_band")) + "</span>")) + "</header>" +
+    '<dl class="kv">' +
+    "<dt>" + t("k_work") + "</dt><dd>" + t("k_work_v", { g: cogs[r.idx], pos: cogs.length - r.idx, n: cogs.length }) + "</dd>" +
+    "<dt>" + t("k_speed", { cad: fmt(ctx.cad, 0) }) + "</dt><dd>" + fmt(r.v, 1) + " km/h (" + sgn(r.dv, 1) + ")</dd>" +
+    "<dt>" + t("k_cad", { v: fmt(ctx.v, 1) }) + "</dt><dd>" + fmt(cadNeed, 1) + " rpm</dd>" +
+    "<dt>" + t("k_ratio") + "</dt><dd>" + fmt(r.chain / cogs[r.idx], 2) + "</dd></dl>" +
+    '<div class="scroll"><table><thead><tr><th>' + t("th_cog") + "</th><th>" + t("th_ratio") + "</th><th>" + t("th_kmh") + "</th><th>" + t("th_delta") + "</th></tr></thead><tbody>" + trs + "</tbody></table></div></article>";
+}
+
+function renderMatrix(ctx) {
+  var cogs = ctx.cogs, band = ctx.res.band;
+  var tags = {};
+  ctx.res.props.forEach(function (p) { tags[p.row.chain] = t("tag_" + p.label); });
+  var head = "<tr><th>" + t("th_chain") + "</th>";
+  for (var j = 0; j < cogs.length; j++) head += '<th class="' + (j >= band.start && j <= band.end ? "cell-band" : "") + '">' + cogs[j] + "T</th>";
+  head += "</tr>";
+  var body = "";
+  ctx.res.rows.forEach(function (r) {
+    body += "<tr><td>" + r.chain + (tags[r.chain] ? '<span class="mark">' + tags[r.chain] + "</span>" : "") + "</td>";
+    for (var j = 0; j < cogs.length; j++) {
+      var cls = j === r.idx ? "cell-target" : (j >= band.start && j <= band.end ? "cell-band" : "");
+      body += '<td class="' + cls + '">' + fmt(speedKmh(r.chain, cogs[j], ctx.cad, ctx.circ), 1) + "</td>";
+    }
+    body += "</tr>";
+  });
+  return '<details class="panel"><summary>' + t("m_sum", { cad: fmt(ctx.cad, 0) }) + "</summary>" +
+    '<div class="legend"><span><i class="sw b"></i>' + t("m_band") + '</span><span><i class="sw t"></i>' + t("m_near", { v: fmt(ctx.v, 1) }) + "</span></div>" +
+    '<div class="scroll"><table class="matrix"><thead>' + head + "</thead><tbody>" + body + "</tbody></table></div></details>";
+}
+
+function render() {
+  var out = $("out");
+  var preset = findPreset($("cassette").value);
+  $("customBox").hidden = $("cassette").value !== "custom";
+  $("wheelBox").hidden = $("wheel").value !== "custom";
+  var cogs;
+  if (preset.cogs) { cogs = preset.cogs.slice(); }
+  else {
+    var pr = parseCogs($("customCogs").value);
+    var errText = pr.err ? t(pr.err.key, { a: pr.err.a }) : "";
+    $("customHint").textContent = pr.err ? errText : t("custom_ok", { n: pr.cogs.length, list: pr.cogs.join("-") });
+    $("customHint").className = pr.err ? "hint err" : "hint";
+    if (pr.err) { out.innerHTML = '<div class="warn">' + t("custom_warn", { err: errText }) + "</div>"; return; }
+    cogs = pr.cogs;
+  }
+  var P = num("power"), cad = num("cad"), cda = num("cda"), mass = num("mass"), crr = num("crr"), rho = num("rho"), eta = num("eta") / 100;
+  var circ = $("wheel").value === "custom" ? num("wheelMm") : Number($("wheel").value);
+  var cmin = Math.round(num("cmin")), cmax = Math.round(num("cmax"));
+  var kb = parseFloat($("kband").value); if (!(kb >= 1)) kb = null;
+  var vf = parseFloat($("vforce").value);
+  var bad = [];
+  if (!(cad >= 40)) bad.push(t("b_cad"));
+  if (!(circ > 1500)) bad.push(t("b_wheel"));
+  if (!(cmin >= 20 && cmax >= cmin)) bad.push(t("b_range"));
+  var o = { cda: cda, mass: mass, crr: crr, rho: rho, eta: eta };
+  var forced = vf > 0;
+  if (!forced) {
+    if (!(P > 0)) bad.push(t("b_power"));
+    if (!(cda > 0 && mass > 0 && crr >= 0 && rho > 0 && eta > 0.5)) bad.push(t("b_model"));
+  }
+  if (bad.length) { out.innerHTML = '<div class="warn">' + t("chk", { list: bad.join(", ") }) + "</div>"; return; }
+
+  var vMs = forced ? vf / 3.6 : solveSpeed(P, o);
+  var v = vMs * 3.6;
+  var res = analyze(cogs, v, cad, circ, cmin, cmax, kb, num("tol"));
+  var ctx = { cogs: cogs, cad: cad, circ: circ, v: v, res: res };
+  var band = res.band;
+  var ratio = v / (circ * cad * 0.00006);
+
+  var html = '<div class="strip">' +
+    '<div class="stat"><div class="lbl">' + (forced ? t("s_speed_fix") : t("s_speed_est")) + '</div><div><span class="v">' + fmt(v, 1) + '</span><span class="u">km/h</span></div><div class="d">' +
+    (forced ? t("d_power", { p: fmt(powerFor(vMs, o), 0) }) : t("d_model", { cda: cda.toLocaleString(loc, { maximumFractionDigits: 3 }) })) + "</div></div>" +
+    '<div class="stat"><div class="lbl">' + t("s_ratio") + '</div><div><span class="v">' + fmt(ratio, 2) + '</span></div><div class="d">' + t("d_ratio", { cad: fmt(cad, 0) }) + "</div></div>" +
+    '<div class="stat"><div class="lbl">' + t("s_band") + '</div><div><span class="v">' + cogs[band.start] + "–" + cogs[band.end] + 'T</span></div><div class="d">' + t("d_band", { k: band.k, n: cogs.length }) + "</div></div>" +
+    '<div class="stat"><div class="lbl">' + t("s_fit") + '</div><div><span class="v">' + (res.fits.length ? res.fits[0].chain + "–" + res.fits[res.fits.length - 1].chain : t("none")) + "</span>" + (res.fits.length ? '<span class="u">T</span>' : "") + '</div><div class="d">' + t("d_fit", { a: res.fits.length, b: res.rows.length }) + "</div></div></div>";
+
+  if (!res.rows.length) {
+    html += '<div class="warn">' + t("w_norange") + "</div>";
+  } else if (!res.props.length) {
+    var closest = res.rows.slice().sort(function (a, b) { return a.off - b.off || Math.abs(a.dv) - Math.abs(b.dv); })[0];
+    html += '<div class="warn">' + t("w_none", { min: res.lo, max: res.hi, v: fmt(v, 1), tol: fmt(res.tol, 0), c: closest.chain, g: cogs[closest.idx], cn: fmt(closest.cadNeed, 1) }) + "</div>";
+  } else {
+    html += '<div class="cards">' + res.props.map(function (p) { return renderCard(p, ctx, p.row.chain === res.bestChain); }).join("") + "</div>";
+    if (res.props.length < 3) html += '<div class="warn">' + t("w_few", { n: res.props.length }) + "</div>";
+    if (res.atCeiling) html += '<div class="warn">' + t("w_ceil", { hi: res.hi }) + "</div>";
+  }
+  if (res.rows.length) html += renderMatrix(ctx);
+  html += '<div class="notes"><p>' + t("n_crit", { tol: fmt(res.tol, 0) }) + "</p><p>" + t("n_model") + "</p><p>" + t("n_cogs") + "</p></div>";
+  out.innerHTML = html;
+}
+
+// Inicio: claro y español por defecto; se recuerda lo último elegido si el navegador lo permite.
+(function () {
+  var l = load("lang"); if (l === "en") { lang = "en"; loc = "en-US"; }
+  var th = load("theme"); document.documentElement.setAttribute("data-theme", th === "dark" ? "dark" : "light");
+  buildSelect(); applyI18n(); syncThemeColor(); render();
+  document.querySelectorAll("input, select").forEach(function (el) { el.addEventListener("input", render); el.addEventListener("change", render); });
+  document.querySelectorAll("[data-lang]").forEach(function (b) { b.addEventListener("click", function () { setLang(b.getAttribute("data-lang")); }); });
+  $("themeBtn").addEventListener("click", function () { setTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark"); });
+})();
+</script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("sw.js").catch(function () {});
+  });
+}
+</script>
+</body>
+</html>
