@@ -1,7 +1,10 @@
 /* Service worker de la Calculadora de desarrollos.
    Estrategia: precarga del "shell" al instalar y, después, caché primero con actualización en segundo plano.
    Al publicar cambios, sube la versión de CACHE para que los usuarios reciban los archivos nuevos. */
-const CACHE = "desarrollos-v1";
+// Prefijo propio: en usuario.github.io todas las apps comparten el espacio de cachés.
+// El workflow sustituye el sufijo por el hash del commit.
+const PREFIX = "desarrollos-";
+const CACHE = "desarrollos-dev";
 const SHELL = [
   "./",
   "index.html",
@@ -31,7 +34,7 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => k.startsWith(PREFIX) && k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });

@@ -51,3 +51,15 @@ plato par que encaja y «Medio» y «Bajo» son los dos pares inmediatamente inf
 - Perfil llano y sin viento: con subidas o viento cambia la velocidad media real y, con ella, el piñón óptimo.
 - Se asume plato único (1x) o el plato grande de un 2x.
 - Los dentados de SRAM están contrastados con fichas del fabricante y tiendas; los de Shimano son los habituales de la serie. Si el tuyo difiere, usa «Personalizado».
+
+## Varias apps en la misma cuenta de GitHub
+
+Todas las apps de `usuario.github.io/<repo>/` comparten **origen**, y por tanto `localStorage` y el espacio de cachés. Esta app lo respeta:
+
+- Cachés del service worker con prefijo `desarrollos-`; al activarse solo borra las suyas.
+- Claves de `localStorage` con prefijo `desarrollos:`.
+- Si despliegas otras apps desde esta misma plantilla, cambia `PREFIX`/`CACHE` en `sw.js`, el workflow y `NS` en `index.html`.
+
+## Versión visible
+
+El pie de la app muestra `v <hash> · <fecha UTC>` del commit desplegado (lo rellena el workflow). En local muestra `v dev`.

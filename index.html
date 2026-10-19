@@ -129,6 +129,7 @@
   .notes { font-size: .85rem; color: var(--muted); display: flex; flex-direction: column; gap: 6px; }
   .notes p { margin: 0; max-width: 90ch; }
   @media (max-width: 480px) { h1 { font-size: 1.6rem; } .big { font-size: 1.9rem; } }
+.buildinfo { margin-top: 18px; text-align: center; font-family: "IBM Plex Mono", monospace; font-size: .7rem; color: var(--muted, #6b7785); opacity: .8; user-select: all; }
 </style>
 </head>
 <body>
@@ -200,6 +201,7 @@
   </section>
 
   <div id="out" aria-live="polite"></div>
+  <footer class="buildinfo" id="buildinfo"></footer>
 </div>
 
 <script>
@@ -403,8 +405,10 @@ function t(k, p) {
 function fmt(x, d) { return new Intl.NumberFormat(loc, { minimumFractionDigits: d, maximumFractionDigits: d }).format(x); }
 function sgn(x, d) { return (x > 0.05 ? "+" : x < -0.05 ? "−" : "±") + fmt(Math.abs(x), d); }
 var $ = function (id) { return document.getElementById(id); };
-function store(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
-function load(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+// Todas las apps de GitHub Pages de un usuario comparten origen (usuario.github.io): las claves llevan prefijo propio.
+var NS = "desarrollos:";
+function store(k, v) { try { localStorage.setItem(NS + k, v); } catch (e) {} }
+function load(k) { try { return localStorage.getItem(NS + k); } catch (e) { return null; } }
 
 function applyI18n() {
   document.documentElement.lang = lang;
@@ -560,6 +564,19 @@ function render() {
   document.querySelectorAll("input, select").forEach(function (el) { el.addEventListener("input", render); el.addEventListener("change", render); });
   document.querySelectorAll("[data-lang]").forEach(function (b) { b.addEventListener("click", function () { setLang(b.getAttribute("data-lang")); }); });
   $("themeBtn").addEventListener("click", function () { setTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark"); });
+})();
+</script>
+<script>
+// Rellenado por el workflow de despliegue (sed). En local queda como "dev".
+var BUILD = { sha: "dev", date: "" };
+(function () {
+  var el = document.getElementById("buildinfo");
+  if (!el) return;
+  var d = BUILD.date ? new Date(BUILD.date) : null;
+  var ok = d && !isNaN(d);
+  var f = ok ? d.toISOString().slice(0, 16).replace("T", " ") + " UTC" : "";
+  el.textContent = "v " + BUILD.sha + (f ? " · " + f : "");
+  el.title = ok ? "Commit " + BUILD.sha + " · " + BUILD.date : "Build local (sin desplegar)";
 })();
 </script>
 <script>
