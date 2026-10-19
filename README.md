@@ -4,6 +4,8 @@ PWA para triatlón y contrarreloj. Dado el cassette, la potencia media y la cade
 en llano y propone **tres platos de dentado par y correlativos** (grande, medio y bajo) con la tabla de velocidades
 de cada marcha. Funciona sin conexión y se puede instalar en el móvil o el ordenador.
 
+https://lsantome.github.io/App-TriTT-Gears/
+
 - Español e inglés (español por defecto) y modo claro/oscuro (claro por defecto).
 - Cassettes SRAM Red/Force de 11, 12 y 13 velocidades, Shimano de 11 y 12 velocidades y cassette personalizado de 11 a 13 piñones.
 - Sin dependencias ni paso de compilación: HTML, CSS y JavaScript puros.
