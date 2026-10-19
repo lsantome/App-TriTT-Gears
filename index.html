@@ -104,6 +104,7 @@
   .card header { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; min-height: 22px; }
   .tag { font-size: .7rem; text-transform: uppercase; letter-spacing: .1em; font-weight: 600; color: var(--muted); }
   .chip { font-size: .68rem; text-transform: uppercase; letter-spacing: .08em; font-weight: 600; background: var(--warn-soft); color: var(--warn); padding: 2px 8px; border-radius: 3px; }
+  .cards.one { grid-template-columns: minmax(0, 1fr); max-width: 520px; }
   .badge { font-size: .68rem; text-transform: uppercase; letter-spacing: .08em; font-weight: 600; background: var(--accent); color: var(--accent-ink); padding: 2px 8px; border-radius: 3px; }
   .big { font-family: var(--f-mono); font-size: 2.2rem; font-weight: 500; line-height: 1; }
   .big small { font-family: var(--f-body); font-size: .85rem; color: var(--muted); margin-left: 4px; }
@@ -191,6 +192,7 @@
           </select>
         </div>
         <div class="field" id="wheelBox" hidden><label for="wheelMm" data-i18n="lbl_wheelmm"></label><input id="wheelMm" type="number" inputmode="decimal" min="1800" max="2300" step="1" value="2136"></div>
+        <div class="field"><label for="cfix" data-i18n="lbl_cfix"></label><input id="cfix" type="number" inputmode="numeric" min="20" max="90" step="1" data-i18n-ph="ph_sim"><span class="hint" data-i18n="hint_cfix"></span></div>
         <div class="field"><label for="cmin" data-i18n="lbl_cmin"></label><input id="cmin" type="number" inputmode="numeric" min="30" max="70" step="2" value="48"></div>
         <div class="field"><label for="cmax" data-i18n="lbl_cmax"></label><input id="cmax" type="number" inputmode="numeric" min="30" max="70" step="2" value="68"><span class="hint" data-i18n="hint_even"></span></div>
         <div class="field"><label for="kband" data-i18n="lbl_kband"></label><input id="kband" type="number" inputmode="numeric" min="1" max="13" step="1" data-i18n-ph="ph_auto"><span class="hint" data-i18n="hint_kband"></span></div>
@@ -305,6 +307,17 @@ function analyze(cogs, vKmh, cad, circ, cmin, cmax, kOverride, tolRpm) {
   return { band: band, rows: rows, fits: fits, props: props, bestChain: bestRow ? bestRow.chain : null,
            tol: tol, lo: lo, hi: hi, atCeiling: !!bestRow && bestRow.chain + 2 > hi, atFloor: !!bestRow && bestRow.chain - 2 < lo };
 }
+// Plato fijo (sin simulación): analiza solo ese plato, de cualquier dentado.
+function fixedRow(chain, cogs, vKmh, cad, circ, kOverride, tolRpm) {
+  var band = centralBand(cogs.length, kOverride);
+  var tol = tolRpm > 0 ? tolRpm : 6;
+  var idx = nearestIdx(chain, cogs, vKmh, cad, circ);
+  var vv = speedKmh(chain, cogs[idx], cad, circ);
+  var cadNeed = cadenceFor(vKmh, chain, cogs[idx], circ);
+  var inBand = idx >= band.start && idx <= band.end;
+  return { band: band, tol: tol, row: { chain: chain, idx: idx, v: vv, dv: vv - vKmh, cadNeed: cadNeed, inBand: inBand,
+    fit: inBand && Math.abs(cadNeed - cad) <= tol, off: Math.abs(idx - band.center) } };
+}
 // Devuelve { cogs } o { err: { key, a } }; los textos los pone la interfaz según el idioma.
 function parseCogs(text) {
   var parts = String(text).split(/[\s,;]+/).filter(Boolean);
@@ -330,6 +343,8 @@ var DICT = {
     lbl_power: "Potencia media objetivo (W)", lbl_cad: "Cadencia media objetivo (rpm)", lbl_cda: "CdA (m²)",
     adv: "Ajustes avanzados", lbl_mass: "Masa ciclista + bici (kg)", lbl_crr: "Crr (rodadura)", lbl_rho: "Densidad del aire (kg/m³)",
     lbl_eta: "Eficiencia de transmisión (%)", lbl_wheel: "Rueda (circunferencia)", wheel_custom: "Otra (mm)…", lbl_wheelmm: "Circunferencia (mm)",
+    lbl_cfix: "Plato fijo (T)", hint_cfix: "Vacío = simular propuestas. Con valor, solo se calcula ese plato", ph_sim: "simular", tag_fixed: "Plato fijo", fixed_ok: "Encaja", s_fixed: "Plato fijo", d_fix_ok: "Encaja con el criterio", d_fix_no: "No encaja con el criterio",
+    n_fixed: "<strong>Plato fijo.</strong> Se analiza únicamente el plato indicado (cualquier dentado), sin simular otros tamaños. El piñón de trabajo es el de velocidad más cercana a la objetivo; la etiqueta indica si cumple el criterio de banda central y cadencia.",
     lbl_cmin: "Plato mínimo a ensayar (T)", lbl_cmax: "Plato máximo a ensayar (T)", hint_even: "Solo se ensayan dentados pares",
     lbl_kband: "Piñones en la banda central", hint_kband: "Vacío = un tercio del cassette", ph_auto: "auto",
     lbl_tol: "Tolerancia de cadencia (± rpm)", hint_tol: "Máxima desviación aceptada con el piñón de trabajo",
@@ -367,6 +382,8 @@ var DICT = {
     lbl_power: "Target average power (W)", lbl_cad: "Target average cadence (rpm)", lbl_cda: "CdA (m²)",
     adv: "Advanced settings", lbl_mass: "Rider + bike mass (kg)", lbl_crr: "Crr (rolling resistance)", lbl_rho: "Air density (kg/m³)",
     lbl_eta: "Drivetrain efficiency (%)", lbl_wheel: "Wheel (circumference)", wheel_custom: "Other (mm)…", lbl_wheelmm: "Circumference (mm)",
+    lbl_cfix: "Fixed chainring (T)", hint_cfix: "Empty = simulate proposals. With a value, only that chainring is calculated", ph_sim: "simulate", tag_fixed: "Fixed chainring", fixed_ok: "Fits", s_fixed: "Fixed chainring", d_fix_ok: "Meets the criterion", d_fix_no: "Does not meet the criterion",
+    n_fixed: "<strong>Fixed chainring.</strong> Only the chainring you enter is analysed (any tooth count), with no other sizes simulated. The working sprocket is the one whose speed is closest to the target; the label tells whether it meets the central-band and cadence criterion.",
     lbl_cmin: "Smallest chainring to test (T)", lbl_cmax: "Largest chainring to test (T)", hint_even: "Only even tooth counts are tested",
     lbl_kband: "Sprockets in the central band", hint_kband: "Empty = one third of the cassette", ph_auto: "auto",
     lbl_tol: "Cadence tolerance (± rpm)", hint_tol: "Maximum deviation accepted on the working sprocket",
@@ -467,7 +484,7 @@ function renderCard(p, ctx, isBest) {
   }
   return '<article class="card' + (isBest ? " best" : "") + '">' +
     '<header><div><div class="tag">' + t("tag_" + p.label) + '</div><div class="big">' + r.chain + "<small>" + t("teeth") + "</small></div></div>" +
-    (isBest ? '<span class="badge">' + t("badge_best") + "</span>" : (r.fit ? "" : '<span class="chip">' + (r.inBand ? t("chip_cad") : t("chip_band")) + "</span>")) + "</header>" +
+    (ctx.fixed && r.fit ? '<span class="badge">' + t("fixed_ok") + "</span>" : isBest ? '<span class="badge">' + t("badge_best") + "</span>" : (r.fit ? "" : '<span class="chip">' + (r.inBand ? t("chip_cad") : t("chip_band")) + "</span>")) + "</header>" +
     '<dl class="kv">' +
     "<dt>" + t("k_work") + "</dt><dd>" + t("k_work_v", { g: cogs[r.idx], pos: cogs.length - r.idx, n: cogs.length }) + "</dd>" +
     "<dt>" + t("k_speed", { cad: fmt(ctx.cad, 0) }) + "</dt><dd>" + fmt(r.v, 1) + " km/h (" + sgn(r.dv, 1) + ")</dd>" +
@@ -515,12 +532,14 @@ function render() {
   var P = num("power"), cad = num("cad"), cda = num("cda"), mass = num("mass"), crr = num("crr"), rho = num("rho"), eta = num("eta") / 100;
   var circ = $("wheel").value === "custom" ? num("wheelMm") : Number($("wheel").value);
   var cmin = Math.round(num("cmin")), cmax = Math.round(num("cmax"));
+  var cfix = Math.round(num("cfix")), fixedOn = cfix >= 20 && cfix <= 90;
+  $("cmin").disabled = $("cmax").disabled = fixedOn;
   var kb = parseFloat($("kband").value); if (!(kb >= 1)) kb = null;
   var vf = parseFloat($("vforce").value);
   var bad = [];
   if (!(cad >= 40)) bad.push(t("b_cad"));
   if (!(circ > 1500)) bad.push(t("b_wheel"));
-  if (!(cmin >= 20 && cmax >= cmin)) bad.push(t("b_range"));
+  if (!fixedOn && !(cmin >= 20 && cmax >= cmin)) bad.push(t("b_range"));
   var o = { cda: cda, mass: mass, crr: crr, rho: rho, eta: eta };
   var forced = vf > 0;
   if (!forced) {
@@ -531,8 +550,9 @@ function render() {
 
   var vMs = forced ? vf / 3.6 : solveSpeed(P, o);
   var v = vMs * 3.6;
-  var res = analyze(cogs, v, cad, circ, cmin, cmax, kb, num("tol"));
-  var ctx = { cogs: cogs, cad: cad, circ: circ, v: v, res: res };
+  var fx = fixedOn ? fixedRow(cfix, cogs, v, cad, circ, kb, num("tol")) : null;
+  var res = fixedOn ? { band: fx.band, tol: fx.tol, rows: [], fits: [] } : analyze(cogs, v, cad, circ, cmin, cmax, kb, num("tol"));
+  var ctx = { cogs: cogs, cad: cad, circ: circ, v: v, res: res, fixed: fixedOn };
   var band = res.band;
   var ratio = v / (circ * cad * 0.00006);
 
@@ -541,9 +561,12 @@ function render() {
     (forced ? t("d_power", { p: fmt(powerFor(vMs, o), 0) }) : t("d_model", { cda: cda.toLocaleString(loc, { maximumFractionDigits: 3 }) })) + "</div></div>" +
     '<div class="stat"><div class="lbl">' + t("s_ratio") + '</div><div><span class="v">' + fmt(ratio, 2) + '</span></div><div class="d">' + t("d_ratio", { cad: fmt(cad, 0) }) + "</div></div>" +
     '<div class="stat"><div class="lbl">' + t("s_band") + '</div><div><span class="v">' + cogs[band.start] + "–" + cogs[band.end] + 'T</span></div><div class="d">' + t("d_band", { k: band.k, n: cogs.length }) + "</div></div>" +
-    '<div class="stat"><div class="lbl">' + t("s_fit") + '</div><div><span class="v">' + (res.fits.length ? res.fits[0].chain + "–" + res.fits[res.fits.length - 1].chain : t("none")) + "</span>" + (res.fits.length ? '<span class="u">T</span>' : "") + '</div><div class="d">' + t("d_fit", { a: res.fits.length, b: res.rows.length }) + "</div></div></div>";
+    (fixedOn ? '<div class="stat"><div class="lbl">' + t("s_fixed") + '</div><div><span class="v">' + cfix + '</span><span class="u">T</span></div><div class="d">' + t(fx.row.fit ? "d_fix_ok" : "d_fix_no") + "</div></div></div>" :
+    '<div class="stat"><div class="lbl">' + t("s_fit") + '</div><div><span class="v">' + (res.fits.length ? res.fits[0].chain + "–" + res.fits[res.fits.length - 1].chain : t("none")) + "</span>" + (res.fits.length ? '<span class="u">T</span>' : "") + '</div><div class="d">' + t("d_fit", { a: res.fits.length, b: res.rows.length }) + "</div></div></div>");
 
-  if (!res.rows.length) {
+  if (fixedOn) {
+    html += '<div class="cards one">' + renderCard({ label: "fixed", row: fx.row }, ctx, false) + "</div>";
+  } else if (!res.rows.length) {
     html += '<div class="warn">' + t("w_norange") + "</div>";
   } else if (!res.props.length) {
     var closest = res.rows.slice().sort(function (a, b) { return a.off - b.off || Math.abs(a.dv) - Math.abs(b.dv); })[0];
@@ -555,7 +578,7 @@ function render() {
     if (res.atFloor) html += '<div class="warn">' + t("w_floor", { lo: res.lo }) + "</div>";
   }
   if (res.rows.length) html += renderMatrix(ctx);
-  html += '<div class="notes"><p>' + t("n_crit", { tol: fmt(res.tol, 0) }) + "</p><p>" + t("n_model") + "</p><p>" + t("n_cogs") + "</p></div>";
+  html += '<div class="notes">' + (fixedOn ? "<p>" + t("n_fixed") + "</p>" : "") + "<p>" + t("n_crit", { tol: fmt(res.tol, 0) }) + "</p><p>" + t("n_model") + "</p><p>" + t("n_cogs") + "</p></div>";
   out.innerHTML = html;
 }
 

@@ -1,7 +1,9 @@
 # Calculadora de desarrollos
 
+**App:** https://lsantome.github.io/App-TriTT-Gears/
+
 PWA para triatlón y contrarreloj. Dado el cassette, la potencia media y la cadencia objetivo, estima la velocidad
-en llano y propone **tres platos de dentado par y correlativos** (grande, medio y bajo) con la tabla de velocidades
+en llano y propone **tres platos de dentado par y correlativos**: el medio es el de mejor línea de cadena, con uno por arriba y otro por abajo (o analiza un plato fijo que tú indiques) con la tabla de velocidades
 de cada marcha. Funciona sin conexión y se puede instalar en el móvil o el ordenador.
 
 - Español e inglés (español por defecto) y modo claro/oscuro (claro por defecto).
