@@ -1,46 +1,53 @@
-# Development (Gear) Calculator
+# Calculadora de desarrollos
 
-PWA for triathlon and time-trial. Given the cassette, average power and target cadence, it estimates the flat-ground speed and proposes three chainrings with even tooth counts and consecutive sizes (large, medium and small) along with the speed table for each gear. Works offline and can be installed on mobile or desktop.
+PWA para triatlón y contrarreloj. Dado el cassette, la potencia media y la cadencia objetivo, estima la velocidad
+en llano y propone **tres platos de dentado par y correlativos** (grande, medio y bajo) con la tabla de velocidades
+de cada marcha. Funciona sin conexión y se puede instalar en el móvil o el ordenador.
 
-- Spanish and English (Spanish by default) and light/dark mode (light by default).
-- SRAM Red/Force cassettes with 11, 12 and 13 speeds, Shimano with 11 and 12 speeds, and a custom cassette option with 11–13 sprockets.
-- No dependencies or build step: plain HTML, CSS and JavaScript.
+- Español e inglés (español por defecto) y modo claro/oscuro (claro por defecto).
+- Cassettes SRAM Red/Force de 11, 12 y 13 velocidades, Shimano de 11 y 12 velocidades y cassette personalizado de 11 a 13 piñones.
+- Sin dependencias ni paso de compilación: HTML, CSS y JavaScript puros.
 
-## Publish to GitHub Pages with GitHub Actions
+## Publicar en GitHub Pages con GitHub Actions
 
-1. Create a new repository on GitHub and upload all contents of this folder, including `.github/`, to the root of the `main` branch.
-2. In the repository, go to **Settings → Pages → Build and deployment** and under *Source* choose **GitHub Actions**.
-3. Each `git push` to `main` runs the workflow `.github/workflows/deploy.yml` and publishes the site. You can also run it manually from the **Actions → Deploy to GitHub Pages → Run workflow** tab.
-4. The first deployment takes one or two minutes. The URL appears in the workflow summary and is usually `https://<username>.github.io/<repository>/`.
-5. Open it on your phone and use **Add to Home Screen** (iOS) or **Install app** (Android and Chrome on desktop).
+1. Crea un repositorio nuevo en GitHub y sube todo el contenido de esta carpeta, incluida `.github/`, a la raíz de la rama `main`.
+2. En el repositorio, ve a **Settings → Pages → Build and deployment** y en *Source* elige **GitHub Actions**.
+3. Cada `git push` a `main` ejecuta el workflow `.github/workflows/deploy.yml` y publica el sitio. También puedes lanzarlo a mano desde la pestaña **Actions → Desplegar en GitHub Pages → Run workflow**.
+4. La primera vez, el despliegue tarda uno o dos minutos. La URL aparece en el resumen del workflow y suele ser `https://<usuario>.github.io/<repositorio>/`.
+5. Ábrela en el móvil y usa **Añadir a pantalla de inicio** (iOS) o **Instalar app** (Android y Chrome de escritorio).
 
-If the deployment fails the first time with a permissions or environment error, check that step 2 is completed before running the workflow.
+Si el despliegue falla la primera vez con un error de permisos o de entorno, revisa que el paso 2 esté hecho antes de lanzar el workflow.
 
-All routes are relative, so it works the same at the root of a custom domain or in a repository subpath.
+Todas las rutas son relativas, así que funciona igual en la raíz de un dominio propio o en la subruta de un repositorio.
 
-## Structure
+## Estructura
 
-| File | Purpose |
+| Archivo | Función |
 |---|---|
-| `index.html` | Interface, calculations and texts in both languages |
-| `manifest.webmanifest` | App name, colors and icons for the installed app |
-| `sw.js` | Service worker: cache for offline use |
-| `fonts/` | Self-hosted fonts (IBM Plex and Barlow Semi Condensed, SIL OFL 1.1 license) |
-| `icons/` | PNG and SVG icons |
-| `.github/workflows/deploy.yml` | Automatic deployment to GitHub Pages |
-| `.nojekyll` | Prevents Jekyll processing when publishing from a branch instead of Actions |
+| `index.html` | Interfaz, cálculo y textos en ambos idiomas |
+| `manifest.webmanifest` | Nombre, colores e iconos de la app instalada |
+| `sw.js` | Service worker: caché para uso sin conexión |
+| `fonts/` | Tipografías autoalojadas (IBM Plex y Barlow Semi Condensed, licencia SIL OFL 1.1) |
+| `icons/` | Iconos PNG y SVG |
+| `.github/workflows/deploy.yml` | Despliegue automático en GitHub Pages |
+| `.nojekyll` | Evita el procesado de Jekyll si se publica desde una rama en vez de con Actions |
 
-## Updating the app
+## Actualizar la app
 
-Edit the files and `git push` to `main`. The workflow replaces the `CACHE` version in `sw.js` with the commit identifier, so devices that already have the app installed receive updates without any further action. If you publish without Actions, manually update the `CACHE` value (e.g., `desarrollos-v2`, `desarrollos-v3`…) on each change.
+Edita los archivos y haz `git push` a `main`. El workflow sustituye la versión de `CACHE` en `sw.js` por el identificador del commit,
+así que los dispositivos que ya tienen la app instalada reciben los cambios sin tocar nada más. Si publicas sin Actions, sube a mano la
+versión de `CACHE` (`desarrollos-v2`, `desarrollos-v3`…) en cada cambio.
 
-## Calculation model
+## Modelo de cálculo
 
-Power at the wheel = power × efficiency = ½·ρ·CdA·v³ + Crr·m·g·v, on flat ground and without wind. Default values: CdA 0.23 m², mass 85 kg, Crr 0.004, ρ 1.19 kg/m³, efficiency 97.5%, wheel 700×28c (2136 mm).
-For each even-tooth chainring the app looks for the sprocket closest to the target speed; it qualifies if it is within the cassette's central band (one third of the sprockets) and the required cadence falls within the tolerance (±6 rpm by default). "Large" is the largest chainring that fits and "Medium" and "Small" are the next two smaller chainrings.
+Potencia en rueda = potencia × eficiencia = ½·ρ·CdA·v³ + Crr·m·g·v, en llano y sin viento. Valores por defecto:
+CdA 0,23 m², masa 85 kg, Crr 0,004, ρ 1,19 kg/m³, eficiencia 97,5 %, rueda 700×28c (2136 mm).
+Para cada plato par se busca el piñón más cercano a la velocidad objetivo; encaja si está en la banda central del cassette
+(un tercio de los piñones) y la cadencia necesaria queda dentro de la tolerancia (±6 rpm por defecto). «Grande» es el mayor
+plato par que encaja y «Medio» y «Bajo» son los dos pares inmediatamente inferiores.
 
-## Limitations
+## Limitaciones
 
-- Flat profile and no wind: climbs or wind change real average speed and therefore the optimal sprocket.
-- Assumes a single chainring (1x) or the large ring of a 2x setup.
-- SRAM tooth counts are verified against manufacturer specs and shop listings; Shimano uses typical series counts. If yours differs, use the "Custom" option.
+- Perfil llano y sin viento: con subidas o viento cambia la velocidad media real y, con ella, el piñón óptimo.
+- Se asume plato único (1x) o el plato grande de un 2x.
+- Los dentados de SRAM están contrastados con fichas del fabricante y tiendas; los de Shimano son los habituales de la serie. Si el tuyo difiere, usa «Personalizado».

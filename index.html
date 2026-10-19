@@ -43,6 +43,7 @@
     --ok: #5CC795; --warn: #E3A94F; --warn-soft: #33270F; color-scheme: dark;
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   body {
     background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5;
     padding-block: 24px 40px;
@@ -54,6 +55,7 @@
   h1 { font-size: 2rem; line-height: 1.1; letter-spacing: .005em; }
   .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px 24px; flex-wrap: wrap; }
   .top > div:first-child { min-width: 0; flex: 1 1 320px; }
+  #out { display: flex; flex-direction: column; gap: 16px; }
   .sub { color: var(--muted); margin: 4px 0 0; max-width: 62ch; }
   .ctl { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; background: var(--surface); }
@@ -61,17 +63,19 @@
   .seg button + button { border-left: 1px solid var(--line); }
   .ctl button {
     font: inherit; font-size: .8rem; font-weight: 600; letter-spacing: .04em; cursor: pointer;
-    color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 6px 12px;
+    color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 6px 12px; min-height: 38px;
   }
   .ctl button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
   .ctl button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 16px; }
-  .inputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 14px 16px; }
+  .inputs { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px 16px; align-items: start; }
+  @media (min-width: 560px) { .inputs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (min-width: 860px) { .inputs { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
   .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
   .field.wide { grid-column: 1 / -1; }
-  label, .lbl { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
+  label, .lbl { font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; line-height: 1.3; color: var(--muted); font-weight: 600; }
   input, select, textarea {
-    font: inherit; font-family: var(--f-mono); font-size: .95rem; color: var(--ink); background: var(--bg);
+    font: inherit; font-family: var(--f-mono); font-size: 1rem; color: var(--ink); background: var(--bg);
     border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px; width: 100%; min-width: 0;
   }
   select { font-family: var(--f-body); }
@@ -84,16 +88,17 @@
   details .inputs { margin-top: 12px; }
   .err { color: var(--warn); font-size: .85rem; }
 
-  .strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); gap: 0; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); overflow: hidden; }
-  .stat { padding: 12px 16px; border-right: 1px solid var(--line); min-width: 0; }
-  .stat:last-child { border-right: 0; }
+  .strip { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; border: 1px solid var(--line); border-radius: 6px; background: var(--line); overflow: hidden; }
+  @media (min-width: 860px) { .strip { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+  .stat { padding: 12px 16px; min-width: 0; background: var(--surface); }
   .stat .v { font-family: var(--f-mono); font-size: 1.5rem; font-weight: 500; font-variant-numeric: tabular-nums; }
   .stat .u { font-size: .85rem; color: var(--muted); margin-left: 3px; }
   .stat .d { font-size: .78rem; color: var(--muted); }
 
   .warn { background: var(--warn-soft); color: var(--warn); border-radius: 6px; padding: 12px 16px; font-size: .9rem; }
 
-  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr)); gap: 16px; }
+  .cards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  @media (min-width: 1100px) { .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
   .card { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
   .card.best { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
   .card header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
@@ -120,6 +125,7 @@
   .matrix td.cell-band, .matrix th.cell-band { background: var(--band); }
   .matrix td.cell-target { background: var(--accent-soft); font-weight: 600; outline: 1px solid var(--accent); outline-offset: -1px; }
   .matrix td:first-child { font-weight: 600; background: var(--surface); position: sticky; left: 0; }
+  .matrix th:first-child { background: var(--surface); position: sticky; left: 0; z-index: 1; }
   .notes { font-size: .85rem; color: var(--muted); display: flex; flex-direction: column; gap: 6px; }
   .notes p { margin: 0; max-width: 90ch; }
   @media (max-width: 480px) { h1 { font-size: 1.6rem; } .big { font-size: 1.9rem; } }
@@ -318,10 +324,10 @@ var DICT = {
   es: {
     title: "Calculadora de desarrollos",
     sub: "Triatlón y contrarreloj. Encuentra el plato más grande que mantiene la velocidad de carrera sobre los piñones centrales del cassette, a tu cadencia.",
-    lbl_cassette: "Cassette instalado", lbl_custom: "Dientes del cassette personalizado (11 a 13 piñones)",
+    lbl_cassette: "Cassette instalado", lbl_custom: "Dientes del cassette (11–13)",
     lbl_power: "Potencia media objetivo (W)", lbl_cad: "Cadencia media objetivo (rpm)", lbl_cda: "CdA (m²)",
     adv: "Ajustes avanzados", lbl_mass: "Masa ciclista + bici (kg)", lbl_crr: "Crr (rodadura)", lbl_rho: "Densidad del aire (kg/m³)",
-    lbl_eta: "Eficiencia de transmisión (%)", lbl_wheel: "Rueda (circunferencia de rodadura)", wheel_custom: "Otra (mm)…", lbl_wheelmm: "Circunferencia (mm)",
+    lbl_eta: "Eficiencia de transmisión (%)", lbl_wheel: "Rueda (circunferencia)", wheel_custom: "Otra (mm)…", lbl_wheelmm: "Circunferencia (mm)",
     lbl_cmin: "Plato mínimo a ensayar (T)", lbl_cmax: "Plato máximo a ensayar (T)", hint_even: "Solo se ensayan dentados pares",
     lbl_kband: "Piñones en la banda central", hint_kband: "Vacío = un tercio del cassette", ph_auto: "auto",
     lbl_tol: "Tolerancia de cadencia (± rpm)", hint_tol: "Máxima desviación aceptada con el piñón de trabajo",
@@ -330,6 +336,7 @@ var DICT = {
     g_r12: "SRAM Red / Force AXS 12 velocidades", g_r11: "SRAM Red XG-1190 11 velocidades", g_f11: "SRAM Force PG-1170 11 velocidades",
     g_x13: "SRAM Red / Force XPLR 13 velocidades", g_s11: "Shimano 11 velocidades", g_s12: "Shimano 12 velocidades", g_custom: "Personalizado",
     custom_item: "Definir dientes manualmente…",
+    sh_r12: "SRAM Red/Force 12v", sh_r11: "SRAM Red 11v", sh_f11: "SRAM Force 11v", sh_x13: "SRAM XPLR 13v", sh_s11: "Shimano 11v", sh_s12: "Shimano 12v",
     err_empty: "Introduce los dientes separados por espacios o comas.", err_num: "«{a}» no es un número de dientes válido (9 a 50).",
     err_count: "Hay {a} piñones; deben ser entre 11 y 13.", err_dup: "Hay un piñón repetido ({a}T).",
     custom_ok: "{n} piñones: {list}", custom_warn: "Cassette personalizado: {err}",
@@ -353,10 +360,10 @@ var DICT = {
   en: {
     title: "Gear calculator",
     sub: "Triathlon and time trial. Finds the largest chainring that holds your race speed on the middle sprockets of the cassette, at your cadence.",
-    lbl_cassette: "Installed cassette", lbl_custom: "Custom cassette teeth (11 to 13 sprockets)",
+    lbl_cassette: "Installed cassette", lbl_custom: "Cassette teeth (11–13)",
     lbl_power: "Target average power (W)", lbl_cad: "Target average cadence (rpm)", lbl_cda: "CdA (m²)",
     adv: "Advanced settings", lbl_mass: "Rider + bike mass (kg)", lbl_crr: "Crr (rolling resistance)", lbl_rho: "Air density (kg/m³)",
-    lbl_eta: "Drivetrain efficiency (%)", lbl_wheel: "Wheel (rolling circumference)", wheel_custom: "Other (mm)…", lbl_wheelmm: "Circumference (mm)",
+    lbl_eta: "Drivetrain efficiency (%)", lbl_wheel: "Wheel (circumference)", wheel_custom: "Other (mm)…", lbl_wheelmm: "Circumference (mm)",
     lbl_cmin: "Smallest chainring to test (T)", lbl_cmax: "Largest chainring to test (T)", hint_even: "Only even tooth counts are tested",
     lbl_kband: "Sprockets in the central band", hint_kband: "Empty = one third of the cassette", ph_auto: "auto",
     lbl_tol: "Cadence tolerance (± rpm)", hint_tol: "Maximum deviation accepted on the working sprocket",
@@ -365,6 +372,7 @@ var DICT = {
     g_r12: "SRAM Red / Force AXS 12-speed", g_r11: "SRAM Red XG-1190 11-speed", g_f11: "SRAM Force PG-1170 11-speed",
     g_x13: "SRAM Red / Force XPLR 13-speed", g_s11: "Shimano 11-speed", g_s12: "Shimano 12-speed", g_custom: "Custom",
     custom_item: "Enter teeth manually…",
+    sh_r12: "SRAM Red/Force 12s", sh_r11: "SRAM Red 11s", sh_f11: "SRAM Force 11s", sh_x13: "SRAM XPLR 13s", sh_s11: "Shimano 11s", sh_s12: "Shimano 12s",
     err_empty: "Enter the teeth separated by spaces or commas.", err_num: "“{a}” is not a valid tooth count (9 to 50).",
     err_count: "There are {a} sprockets; it must be between 11 and 13.", err_dup: "A sprocket is repeated ({a}T).",
     custom_ok: "{n} sprockets: {list}", custom_warn: "Custom cassette: {err}",
@@ -428,7 +436,7 @@ function buildSelect() {
     var gl = t("g_" + g.group);
     html += '<optgroup label="' + gl + '">';
     g.items.forEach(function (it) {
-      html += '<option value="' + it.id + '">' + (g.group === "custom" ? t("custom_item") : gl + " · " + it.name) + "</option>";
+      html += '<option value="' + it.id + '">' + (g.group === "custom" ? t("custom_item") : t("sh_" + g.group) + " · " + it.name) + "</option>";
     });
     html += "</optgroup>";
   });
@@ -448,7 +456,7 @@ function renderCard(p, ctx, isBest) {
   for (var j = cogs.length - 1; j >= 0; j--) {
     var s = speedKmh(r.chain, cogs[j], ctx.cad, ctx.circ);
     var cls = (j === r.idx ? "target" : (j >= band.start && j <= band.end ? "band" : ""));
-    trs += '<tr class="' + cls + '"><td>' + cogs[j] + "T" + (j === r.idx ? '<span class="mark">' + t("mark_work") + "</span>" : "") + "</td><td>" +
+    trs += '<tr class="' + cls + '"><td>' + cogs[j] + "T" + (j === r.idx ? '<span class="mark" role="img" aria-label="' + t("mark_work") + '" title="' + t("mark_work") + '">●</span>' : "") + "</td><td>" +
       fmt(r.chain / cogs[j], 2) + "</td><td>" + fmt(s, 1) + '</td><td class="' + (j === r.idx ? "" : "neg") + '">' + sgn(s - ctx.v, 1) + "</td></tr>";
   }
   return '<article class="card' + (isBest ? " best" : "") + '">' +
