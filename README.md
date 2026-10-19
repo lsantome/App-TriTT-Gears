@@ -8,8 +8,6 @@ de cada marcha. Funciona sin conexión y se puede instalar en el móvil o el ord
 - Cassettes SRAM Red/Force de 11, 12 y 13 velocidades, Shimano de 11 y 12 velocidades y cassette personalizado de 11 a 13 piñones.
 - Sin dependencias ni paso de compilación: HTML, CSS y JavaScript puros.
 
-- https://lsantome.github.io/App-TriTT-Gears/
-
 ## Publicar en GitHub Pages con GitHub Actions
 
 1. Crea un repositorio nuevo en GitHub y sube todo el contenido de esta carpeta, incluida `.github/`, a la raíz de la rama `main`.

@@ -1,5 +1,5 @@
 /* Service worker de la Calculadora de desarrollos.
-   Estrategia: precarga del "shell" al instalar y, después, caché primero con actualización en segundo plano.
+   Estrategia: precarga del "shell" al instalar; la página se pide primero a la red (siempre la versión desplegada) y el resto de archivos van caché primero con actualización en segundo plano.
    Al publicar cambios, sube la versión de CACHE para que los usuarios reciban los archivos nuevos. */
 // Prefijo propio: en usuario.github.io todas las apps comparten el espacio de cachés.
 // El workflow sustituye el sufijo por el hash del commit.
@@ -42,6 +42,18 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET" || new URL(req.url).origin !== self.location.origin) return;
+  // Páginas (navegación): red primero, para ver siempre la versión desplegada; la caché solo sirve sin conexión.
+  if (req.mode === "navigate") {
+    event.respondWith(
+      fetch(req)
+        .then((res) => {
+          if (res && res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put("index.html", copy)); }
+          return res;
+        })
+        .catch(() => caches.open(CACHE).then((c) => c.match("index.html")))
+    );
+    return;
+  }
   event.respondWith(
     caches.open(CACHE).then(async (cache) => {
       const cached = await cache.match(req, { ignoreSearch: true });
