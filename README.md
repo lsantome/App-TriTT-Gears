@@ -4,8 +4,6 @@ PWA para triatlón y contrarreloj. Dado el cassette, la potencia media y la cade
 en llano y propone **tres platos de dentado par y correlativos** (grande, medio y bajo) con la tabla de velocidades
 de cada marcha. Funciona sin conexión y se puede instalar en el móvil o el ordenador.
 
-https://lsantome.github.io/App-TriTT-Gears/
-
 - Español e inglés (español por defecto) y modo claro/oscuro (claro por defecto).
 - Cassettes SRAM Red/Force de 11, 12 y 13 velocidades, Shimano de 11 y 12 velocidades y cassette personalizado de 11 a 13 piñones.
 - Sin dependencias ni paso de compilación: HTML, CSS y JavaScript puros.
@@ -65,3 +63,8 @@ Todas las apps de `usuario.github.io/<repo>/` comparten **origen**, y por tanto 
 ## Versión visible
 
 El pie de la app muestra `v <hash> · <fecha UTC>` del commit desplegado (lo rellena el workflow). En local muestra `v dev`.
+
+## Identidad de la PWA (importante con varias apps en el mismo usuario)
+
+Chrome/Edge identifican cada PWA por el campo `id` del manifest, resuelto contra el **origen**. Un `id` como `"./"` equivale a `https://usuario.github.io/` y es idéntico en todas las apps del usuario: el navegador las toma por la misma app y, al actualizar una, propone "cambiar logotipo y nombre" por los de otra.
+Esta app usa `"id": "/desarrollos-calculadora"`. Cada app debe tener el suyo, distinto. Si cambias el `id` de una app ya instalada, desinstálala y vuelve a instalarla una vez.

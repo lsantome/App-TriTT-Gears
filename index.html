@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Calculadora de desarrollos</title>
-<meta name="description" content="Calculadora de desarrollos para triatlón y contrarreloj: elige el plato más grande que mantiene tu velocidad objetivo sobre los piñones centrales del cassette.">
+<meta name="description" content="Calculadora de desarrollos para triatlón y contrarreloj: elige el plato con la mejor línea de cadena para tu velocidad objetivo, más una opción por arriba y otra por abajo.">
 <meta name="theme-color" content="#EEF1F4">
 <meta name="color-scheme" content="light dark">
 <meta name="mobile-web-app-capable" content="yes">
@@ -101,7 +101,7 @@
   @media (min-width: 1100px) { .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
   .card { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
   .card.best { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
-  .card header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .card header { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; min-height: 22px; }
   .tag { font-size: .7rem; text-transform: uppercase; letter-spacing: .1em; font-weight: 600; color: var(--muted); }
   .chip { font-size: .68rem; text-transform: uppercase; letter-spacing: .08em; font-weight: 600; background: var(--warn-soft); color: var(--warn); padding: 2px 8px; border-radius: 3px; }
   .badge { font-size: .68rem; text-transform: uppercase; letter-spacing: .08em; font-weight: 600; background: var(--accent); color: var(--accent-ink); padding: 2px 8px; border-radius: 3px; }
@@ -277,7 +277,8 @@ function nearestIdx(chain, cogs, v, cad, circ) {
 function better(a, b) { // a mejor que b: más centrado, y a igualdad menor error de velocidad
   return a.off < b.off || (a.off === b.off && Math.abs(a.dv) < Math.abs(b.dv));
 }
-// Solo platos de dentado par. Grande = mayor plato par que encaja; Medio y Bajo = los dos pares correlativos inferiores.
+// Solo platos de dentado par. Medio = el plato par que encaja con la mejor línea de cadena (piñón más centrado; a igualdad, menor error de velocidad).
+// Grande = Medio + 2 dientes y Bajo = Medio − 2 dientes.
 function analyze(cogs, vKmh, cad, circ, cmin, cmax, kOverride, tolRpm) {
   var band = centralBand(cogs.length, kOverride);
   var tol = tolRpm > 0 ? tolRpm : 6;
@@ -294,16 +295,15 @@ function analyze(cogs, vKmh, cad, circ, cmin, cmax, kOverride, tolRpm) {
   }
   var fits = rows.filter(function (r) { return r.fit; });
   var props = [];
-  if (fits.length) {
-    var top = fits[fits.length - 1].chain;
-    [["large", top], ["medium", top - 2], ["small", top - 4]].forEach(function (e) {
+  var bestRow = null;
+  fits.forEach(function (r) { if (!bestRow || better(r, bestRow)) bestRow = r; });
+  if (bestRow) {
+    [["large", bestRow.chain + 2], ["medium", bestRow.chain], ["small", bestRow.chain - 2]].forEach(function (e) {
       if (byChain[e[1]]) props.push({ label: e[0], row: byChain[e[1]] });
     });
   }
-  var bestRow = null;
-  props.forEach(function (p) { if (p.row.fit && (!bestRow || better(p.row, bestRow))) bestRow = p.row; });
   return { band: band, rows: rows, fits: fits, props: props, bestChain: bestRow ? bestRow.chain : null,
-           tol: tol, lo: lo, hi: hi, atCeiling: fits.length > 0 && fits[fits.length - 1].chain === hi };
+           tol: tol, lo: lo, hi: hi, atCeiling: !!bestRow && bestRow.chain + 2 > hi, atFloor: !!bestRow && bestRow.chain - 2 < lo };
 }
 // Devuelve { cogs } o { err: { key, a } }; los textos los pone la interfaz según el idioma.
 function parseCogs(text) {
@@ -325,7 +325,7 @@ function parseCogs(text) {
 var DICT = {
   es: {
     title: "Calculadora de desarrollos",
-    sub: "Triatlón y contrarreloj. Encuentra el plato más grande que mantiene la velocidad de carrera sobre los piñones centrales del cassette, a tu cadencia.",
+    sub: "Triatlón y contrarreloj. Encuentra el plato con la mejor línea de cadena para tu velocidad de carrera (piñones centrales del cassette, a tu cadencia) y una opción por arriba y otra por abajo.",
     lbl_cassette: "Cassette instalado", lbl_custom: "Dientes del cassette (11–13)",
     lbl_power: "Potencia media objetivo (W)", lbl_cad: "Cadencia media objetivo (rpm)", lbl_cda: "CdA (m²)",
     adv: "Ajustes avanzados", lbl_mass: "Masa ciclista + bici (kg)", lbl_crr: "Crr (rodadura)", lbl_rho: "Densidad del aire (kg/m³)",
@@ -348,20 +348,21 @@ var DICT = {
     s_fit: "Platos que encajan", none: "ninguno", d_fit: "{a} de {b} ensayados",
     w_norange: "El rango de platos no contiene ningún dentado par.",
     w_none: "Ningún plato par entre {min} y {max}T deja {v} km/h dentro de la banda central, a ±{tol} rpm de tu cadencia, con este cassette. El más próximo es {c}T, que cae en el piñón de {g}T ({cn} rpm para la velocidad objetivo). Amplía el rango de platos, sube la tolerancia o cambia de cassette.",
-    w_few: "Solo hay {n} plato(s) par(es) correlativo(s) dentro del rango ensayado. Baja el plato mínimo en los ajustes avanzados para ver tres propuestas.",
-    w_ceil: "El plato grande ({hi}T) es el máximo del rango ensayado. Con este cassette podría encajar un plato mayor: sube el plato máximo en los ajustes avanzados.",
+    w_few: "Solo se pueden mostrar {n} propuesta(s): el plato Medio queda en el borde del rango ensayado. Amplía el rango en los ajustes avanzados para ver también el plato por encima y el de por debajo.",
+    w_ceil: "No hay propuesta Grande: el plato Medio ya está a 2 dientes del máximo del rango ({hi}T). Sube el plato máximo en los ajustes avanzados.",
+    w_floor: "No hay propuesta Baja: el plato Medio ya está a 2 dientes del mínimo del rango ({lo}T). Baja el plato mínimo en los ajustes avanzados.",
     tag_large: "Grande", tag_medium: "Medio", tag_small: "Bajo", badge_best: "Mejor línea de cadena",
     chip_cad: "Cadencia fuera de tolerancia", chip_band: "Fuera de la banda central", teeth: "dientes",
     k_work: "Piñón de trabajo", k_work_v: "{g}T ({pos} de {n})", k_speed: "Velocidad a {cad} rpm", k_cad: "Cadencia para {v} km/h", k_ratio: "Relación",
     th_cog: "Piñón", th_ratio: "Relación", th_kmh: "km/h", th_delta: "Δ obj.", mark_work: "piñón de trabajo", th_chain: "Plato",
     m_sum: "Ensayo completo: velocidad (km/h) de cada plato con cada piñón a {cad} rpm", m_band: "Banda central", m_near: "Piñón más cercano a {v} km/h",
-    n_crit: "<strong>Criterio.</strong> Para cada plato se busca el piñón cuya velocidad a tu cadencia queda más cerca de la objetivo. El plato encaja si ese piñón está en la banda central y la cadencia necesaria para la velocidad objetivo queda dentro de la tolerancia (±{tol} rpm). «Grande» es el mayor plato de dentado par que encaja. «Medio» y «Bajo» son los dos pares correlativos inferiores (de 2 en 2 dientes), tanto si encajan como si no; si alguno se sale del criterio, la tarjeta lo indica. «Mejor línea de cadena» señala, entre las que encajan, la propuesta con el piñón de trabajo más centrado.",
+    n_crit: "<strong>Criterio.</strong> Para cada plato se busca el piñón cuya velocidad a tu cadencia queda más cerca de la objetivo. El plato encaja si ese piñón está en la banda central y la cadencia necesaria para la velocidad objetivo queda dentro de la tolerancia (±{tol} rpm). «Medio» es el plato de dentado par que encaja con la mejor línea de cadena: el piñón de trabajo más centrado en el cassette (a igualdad, el que menos se aleja de la velocidad objetivo). «Grande» es +2 dientes y «Bajo» −2 dientes respecto al Medio, tanto si encajan como si no; si alguno se sale del criterio, la tarjeta lo indica.",
     n_model: "<strong>Modelo.</strong> Potencia en rueda = potencia × eficiencia = ½·ρ·CdA·v³ + Crr·m·g·v, en llano y sin viento. Con subidas o viento la velocidad media real cambia y con ella el piñón óptimo. Se asume plato único (1x) o el plato grande en un 2x.",
     n_cogs: "<strong>Dentados.</strong> Los dentados de SRAM (Red/Force 11 y 12 velocidades, XPLR 13) están contrastados con fichas del fabricante y tiendas; los de Shimano son los habituales de la serie. Comprueba el tuyo y, si difiere, usa «Personalizado»."
   },
   en: {
     title: "Gear calculator",
-    sub: "Triathlon and time trial. Finds the largest chainring that holds your race speed on the middle sprockets of the cassette, at your cadence.",
+    sub: "Triathlon and time trial. Finds the chainring with the best chain line for your race speed (middle sprockets of the cassette, at your cadence), plus one size up and one down.",
     lbl_cassette: "Installed cassette", lbl_custom: "Cassette teeth (11–13)",
     lbl_power: "Target average power (W)", lbl_cad: "Target average cadence (rpm)", lbl_cda: "CdA (m²)",
     adv: "Advanced settings", lbl_mass: "Rider + bike mass (kg)", lbl_crr: "Crr (rolling resistance)", lbl_rho: "Air density (kg/m³)",
@@ -384,14 +385,15 @@ var DICT = {
     s_fit: "Chainrings that fit", none: "none", d_fit: "{a} of {b} tested",
     w_norange: "The chainring range contains no even tooth count.",
     w_none: "No even-numbered chainring between {min} and {max}T keeps {v} km/h inside the central band within ±{tol} rpm of your cadence with this cassette. The closest is {c}T, which lands on the {g}T sprocket ({cn} rpm for the target speed). Widen the chainring range, raise the tolerance or change cassette.",
-    w_few: "Only {n} consecutive even chainring(s) fall inside the tested range. Lower the smallest chainring in the advanced settings to see three proposals.",
-    w_ceil: "The large chainring ({hi}T) is the top of the tested range. A larger one might fit with this cassette: raise the largest chainring in the advanced settings.",
+    w_few: "Only {n} proposal(s) can be shown: the Medium chainring sits at the edge of the tested range. Widen the range in the advanced settings to see the sizes above and below it.",
+    w_ceil: "No Large proposal: the Medium chainring is already within 2 teeth of the top of the range ({hi}T). Raise the largest chainring in the advanced settings.",
+    w_floor: "No Small proposal: the Medium chainring is already within 2 teeth of the bottom of the range ({lo}T). Lower the smallest chainring in the advanced settings.",
     tag_large: "Large", tag_medium: "Medium", tag_small: "Small", badge_best: "Best chain line",
     chip_cad: "Cadence out of tolerance", chip_band: "Outside central band", teeth: "teeth",
     k_work: "Working sprocket", k_work_v: "{g}T ({pos} of {n})", k_speed: "Speed at {cad} rpm", k_cad: "Cadence for {v} km/h", k_ratio: "Ratio",
     th_cog: "Sprocket", th_ratio: "Ratio", th_kmh: "km/h", th_delta: "Δ target", mark_work: "working sprocket", th_chain: "Chainring",
     m_sum: "Full trial: speed (km/h) of each chainring on each sprocket at {cad} rpm", m_band: "Central band", m_near: "Sprocket closest to {v} km/h",
-    n_crit: "<strong>Criterion.</strong> For each chainring, the sprocket whose speed at your cadence is closest to the target is picked. The chainring fits if that sprocket is in the central band and the cadence needed for the target speed is within the tolerance (±{tol} rpm). “Large” is the largest even-toothed chainring that fits. “Medium” and “Small” are the next two consecutive even sizes below (2 teeth apart), whether or not they fit; the card flags any that fall outside the criterion. “Best chain line” marks, among those that fit, the proposal whose working sprocket sits nearest the middle of the cassette.",
+    n_crit: "<strong>Criterion.</strong> For each chainring, the sprocket whose speed at your cadence is closest to the target is picked. The chainring fits if that sprocket is in the central band and the cadence needed for the target speed is within the tolerance (±{tol} rpm). “Medium” is the even-toothed chainring that fits with the best chain line: the working sprocket nearest the middle of the cassette (ties go to the smaller speed error). “Large” is +2 teeth and “Small” is −2 teeth from Medium, whether or not they fit; the card flags any that fall outside the criterion.",
     n_model: "<strong>Model.</strong> Wheel power = power × efficiency = ½·ρ·CdA·v³ + Crr·m·g·v, on flat ground with no wind. With climbs or wind the real average speed changes, and so does the best sprocket. It assumes a single chainring (1x) or the big ring of a 2x.",
     n_cogs: "<strong>Tooth counts.</strong> SRAM tooth counts (Red/Force 11- and 12-speed, XPLR 13-speed) were checked against manufacturer sheets and retailers; Shimano ones are the usual counts for the series. Check yours and, if it differs, use “Custom”."
   }
@@ -550,6 +552,7 @@ function render() {
     html += '<div class="cards">' + res.props.map(function (p) { return renderCard(p, ctx, p.row.chain === res.bestChain); }).join("") + "</div>";
     if (res.props.length < 3) html += '<div class="warn">' + t("w_few", { n: res.props.length }) + "</div>";
     if (res.atCeiling) html += '<div class="warn">' + t("w_ceil", { hi: res.hi }) + "</div>";
+    if (res.atFloor) html += '<div class="warn">' + t("w_floor", { lo: res.lo }) + "</div>";
   }
   if (res.rows.length) html += renderMatrix(ctx);
   html += '<div class="notes"><p>' + t("n_crit", { tol: fmt(res.tol, 0) }) + "</p><p>" + t("n_model") + "</p><p>" + t("n_cogs") + "</p></div>";
