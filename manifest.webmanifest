@@ -6,33 +6,15 @@
   "dir": "ltr",
   "start_url": "./",
   "scope": "./",
-  "id": "./",
+  "id": "/desarrollos-calculadora",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#EEF1F4",
   "theme_color": "#EEF1F4",
-  "categories": [
-    "sports",
-    "utilities"
-  ],
+  "categories": ["sports", "utilities"],
   "icons": [
-    {
-      "src": "icons/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icons/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icons/icon-maskable-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
-    }
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }
